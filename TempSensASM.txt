@@ -1,0 +1,57 @@
+DATA SEGMENT
+    PORTA EQU 00H       ; Define constants for port addresses
+    PORTB EQU 02H
+    PORTC EQU 04H
+    PORT_CON EQU 06H
+DATA ENDS
+
+CODE SEGMENT
+    MOV AX, DATA        ; Load the data segment address into AX register
+    MOV DS, AX          ; Initialize the data segment register with AX
+
+    ORG 0000H            ; Set the origin of the code segment to 0000H
+
+START:
+    MOV DX, PORT_CON    ; Initialize control port for 8255A
+    MOV AL, 10010000B    ; Port C (output), Port A (input) in mode 0, and PORT B (output) in mode 0
+    OUT DX, AL          ; Output the control word to the control port
+
+    MOV AL, 00H         ; Clear AL register
+
+XX:
+    MOV DX, PORTA       ; Read data from PORTA (connected to ADC0804)
+    IN AL, DX           ; Input data from PORTA into AL register
+
+    CMP AL, 2           ; 2 steps represent approximately 10V+-1
+    JBE TurnOnLED
+    JMP TurnOffLED
+
+TurnOnLED:
+    MOV DX, PORTC       ; Output data to PORTC (turn on LED)
+    MOV AL, 11111111B   ; Turn on the LED
+    OUT DX, AL          ; Output the data read from PORTA to PORTC
+    JMP Continue
+
+TurnOffLED:
+    MOV DX, PORTC       ; Output data to PORTC (turn off LED)
+    MOV AL, 00000000B   ; Turn off the LED
+    OUT DX, AL          ; Output the data read from PORTA to PORTC
+
+Continue:
+    MOV DX, PORTB       ; Set PORTB to 00000000B
+    XOR AL, AL
+    OUT DX, AL          ; Output 00000000B to PORTB
+
+    MOV CX, 0FFH        ; Initialize CX register for delay loop
+D1:
+    LOOP D1             ; Delay loop
+    MOV DX, PORTB       ; Output 00000001B to PORTB
+    MOV AL, 00000001B
+    OUT DX, AL
+    MOV CX, 0FFH        ; Re-initialize CX for another delay loop
+D2:
+    LOOP D2             ; Delay loop
+    JMP XX              ; Jump back to XX, creating an infinite loop
+
+CODE ENDS
+END START             ; End of the code segment
